@@ -17,9 +17,6 @@ print(type(output))
 
 for data in output.splitlines():
     set_of_vers = "ovs-vsctl set Bridge {0} protocols=OpenFlow13".format(data)
-
-    print(set_of_vers)
-
     os.system(set_of_vers)
     # switch_list.append(data)
     # print(data)
