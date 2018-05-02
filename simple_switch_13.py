@@ -22,6 +22,8 @@ from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
 from ryu.lib.packet import stream_parser
+import requests
+import json
 
 class SimpleSwitch13(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -63,6 +65,9 @@ class SimpleSwitch13(app_manager.RyuApp):
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
 
+    def get_bandwidth():
+        
+
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         # If you hit this you might want to increase
@@ -88,8 +93,51 @@ class SimpleSwitch13(app_manager.RyuApp):
 	
 	for p in pkt.protocols:
             if p.protocol_name == 'ipv4':
-		print(p.src)
-	# print("Printing packet contents" + parse(pkt.src))
+		ip_src = p.src # print(p.src)
+
+                with open("test.txt", "r") as f:
+
+                for line in f:
+                    print(line)
+                    # f_contents = f.readline() # f.read()
+                    # print(f_contents)
+                    ip_addr = re.split(",", line)
+                    user[users[0]] = users[1]
+                    print(user)
+                    # print(users)
+            
+
+
+        """
+        with open("test.txt", "r") as f:
+            for line in f:
+                print(line)
+                # f_contents = f.readline() # f.read()
+                # print(f_contents)
+                users = re.split(",", line)
+                user[users[0]] = users[1]
+                print(user)
+                # print(users)
+                
+            
+            print(f.name)
+            print(f.mode)
+        
+        get IP address
+
+        class = {1: 200000, 2: 500000, 3: 1000000}
+
+        if ip_address in users
+                gather bw information (use rest)
+                for i in range(numofclasses)
+                        if current bw info < class[], install flow entry to go towards that IP address
+                (priority based on class)
+        else
+                install flow entry drop
+
+
+        future scope
+        """
 
         eth = pkt.get_protocols(ethernet.ethernet)[0]
 	
