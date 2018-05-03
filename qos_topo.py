@@ -8,9 +8,6 @@ def get_qos_settings(switch_id):
     http_req = "http://localhost:8080/v1.0/topology/switches" + str(switch_id)
     switch_settings = requests.get(http_req)
     
-    # data = switch_settings.json() 
-    # print(data)
-
     json_switch_settings = json.loads(switch_settings.content)
     # print(json_switch_settings)
 

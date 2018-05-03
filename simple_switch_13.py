@@ -65,8 +65,15 @@ class SimpleSwitch13(app_manager.RyuApp):
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
 
-    def get_bandwidth():
+    def get_bandwidth(switch_id):
+        http_req = "http://localhost:8080/qos/rules" + str(switch_id)
+        band_info = requests.get(http_req)
         
+        json_switch_settings = json.loads(band_info.content)
+        # print(json_switch_settings)
+
+        
+        http_req = "http://"
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
@@ -90,6 +97,26 @@ class SimpleSwitch13(app_manager.RyuApp):
 	print("Printing in_port: " + str(in_port))
 	
 	pkt = packet.Packet(msg.data)
+
+        
+def send_flow_mod(self, datapath):
+    ofp = datapath.ofproto
+    ofp_parser = datapath.ofproto_parser
+
+    match = ofp_parser.OFPMatch(in_port=1)
+    cookie = 0
+    command = ofp.OFPFC_ADD
+    idle_timeout = hard_timeout = 0
+    priority = 32768
+    buffer_id = 0xffffffff
+    out_port = ofproto.OFPP_NONE
+    flags = 0
+    actions = [ofp_parser.OFPActionOutput(ofp.OFPP_NORMAL, 0)]
+    req = ofp_parser.OFPFlowMod(
+        datapath, match, cookie, command, idle_timeout, hard_timeout,
+        priority, buffer_id, out_port, flags, actions)
+    datapath.send_msg(req)
+
 	
 	for p in pkt.protocols:
             if p.protocol_name == 'ipv4':
@@ -106,6 +133,45 @@ class SimpleSwitch13(app_manager.RyuApp):
                     print(user)
                     # print(users)
             
+                        if p.src in ip_addr_dict:
+                            match = parser.OFPMatch()
+                            # req = ofp_parser.OFPFlowMod(datapath, match, cookie, command, idle_timeout, hard_timeout,
+                                #                        priority, buffer_id, out_port, flags, actions)
+                            self.add_flow(datapath, msg.in_port, dst, src, actions)
+                            break
+
+
+                            if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+                                # ignore lldp packet
+                                return
+                            dst = eth.dst
+                            src = eth.src
+
+                            dpid = datapath.id
+                            print("Printing dpid:" + str((dpid)))
+
+                            self.mac_to_port.setdefault(dpid, {})
+
+                            self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
+
+                            # learn a mac address to avoid FLOOD next time.
+                            self.mac_to_port[dpid][src] = msg.in_port
+
+                            if dst in self.mac_to_port[dpid]:
+                                out_port = self.mac_to_port[dpid][dst]
+                            else:
+                                out_port = ofproto.OFPP_FLOOD
+
+                            print(out_port)
+                            actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+
+                            # install a flow to avoid packet_in next time
+                            if out_port != ofproto.OFPP_FLOOD:
+                                self.add_flow(datapath, msg.in_port, dst, src, actions)
+
+                            data = None
+                            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                                data = msg.data
 
 
         """
