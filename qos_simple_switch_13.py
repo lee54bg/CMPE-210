@@ -24,16 +24,14 @@ class SimpleSwitch13(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-        # install table-miss flow entry
-        #
-        # We specify NO BUFFER to max_len of the output action due to
-        # OVS bug. At this moment, if we specify a lesser number, e.g.,
-        # 128, OVS will send Packet-In with invalid buffer_id and
-        # truncated packet data. In that case, we cannot output packets
-        # correctly.  The bug has been fixed in OVS v2.1.0.
+
+	# Indicates an empty match which means that we match everything
         match = parser.OFPMatch()
+	# Forward the packet to the OF Controller without buffering
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
+	# Call add_flow to install flow entry via flow_mod to modify flow table
+	# To add flow entry
         self.add_flow(datapath, 0, match, actions)
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
@@ -64,11 +62,6 @@ class SimpleSwitch13(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-        # If you hit this you might want to increase
-        # the "miss_send_length" of your switch
-        if ev.msg.msg_len < ev.msg.total_len:
-            self.logger.debug("packet truncated: only %s of %s bytes",
-                              ev.msg.msg_len, ev.msg.total_len)
         msg = ev.msg
         datapath = msg.datapath
         ofproto = datapath.ofproto
@@ -76,29 +69,36 @@ class SimpleSwitch13(app_manager.RyuApp):
         in_port = msg.match['in_port']
 
         pkt = packet.Packet(msg.data)
-	
 	eth = pkt.get_protocols(ethernet.ethernet)[0]
+	ipv4_pkt = pkt.get_protocol(ipv4.ipv4)
+	arp_pkt = pkt.get_protocol(arp.arp)
 
-        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-            # ignore lldp packet
-            return
+	if ipv4_pkt:
+	    ipv4_src = ipv4_pkt.src
+	    print(ipv4_src)
+	elif arp_pkt:
+	    arp_src_ip = arp_pkt.src_ip
+	    print(arp_src_ip)
+
         dst = eth.dst
         src = eth.src
-	
-	eth_list = ["00:00:00:00:00:02", "00:00:00:00:00:03", "00:00:00:00:00:04"]
 
+	# Define a list of subscribers	
+	eth_list = ["00:00:00:00:00:02", "00:00:00:00:00:03", "00:00:00:00:00:05", "00:00:00:00:00:01"]
 	found = False
-	
+	# Check list to see if MAC address is found in the list of MAC address	
 	if src in eth_list:
+	    # Execute the set_qos function to install qos rules
 	    self.set_qos(src)
 	    print("Success")
 	    found = True
 	
+	# Otherwise, install a flow rule that essentially drops the packet 
+	# by calling the drop_flow method
 	if found == False:
 	    match = parser.OFPMatch(eth_src = src)
 	    self.drop_flow(datapath, 0, match)
-	    # return
-	
+	    return
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
 
@@ -132,10 +132,10 @@ class SimpleSwitch13(app_manager.RyuApp):
                                   in_port=in_port, actions=actions, data=data)
         datapath.send_msg(out)
 
+    # Function used to set the QoS rules when there's a match
     def set_qos(self, eth_src):
-	
-        if eth_src == "00:00:00:00:00:02":
-            first_rule = requests.post("http://localhost:8080/qos/rules/0000000000000001", '{"match": {"nw_src": "10.0.0.2", "nw_dst": "10.0.0.1", "tp_dst": "5002"}, "actions":{"queue": "1"}}')
+	if eth_src == "00:00:00:00:00:02":
+            first_rule = requests.post("http://localhost:8080/qos/rules/0000000000000001", '{"match": {"nw_src": "10.0.0.2", "nw_dst": "10.0.0.1"}, "actions":{"queue": "1"}}')
             
 	if eth_src == "00:00:00:00:00:03":
             third_rule = requests.post("http://localhost:8080/qos/rules/0000000000000001", '{"match": {"nw_src": "10.0.0.3", "nw_dst": "10.0.0.1"}, "actions":{"queue": "2"}}')
