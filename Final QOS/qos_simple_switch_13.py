@@ -105,7 +105,6 @@ class SimpleSwitch13(app_manager.RyuApp):
                 # self.set_qos(arp_pkt)
             elif arp_dst_ip in ip_list:
                 found = True
-                continue
             else:
                 match = parser.OFPMatch(arp_spa = arp_src_ip)
                 self.drop_flow(datapath, 0, match)
@@ -121,7 +120,6 @@ class SimpleSwitch13(app_manager.RyuApp):
                 # self.set_qos(ipv4_pkt)
             elif ip4_dst in ip_list:
                 found = True
-                continue
             else:
                 match = parser.OFPMatch(ipv4_src = ip4_src)
                 self.drop_flow(datapath, 0, match)
@@ -164,13 +162,13 @@ class SimpleSwitch13(app_manager.RyuApp):
 
     # Function used to set the QoS rules when there's a match
     def set_qos(self, pkt_to_compare):
-        if pkt_to_compare == 'ipv4'
+        if pkt_to_compare == 'ipv4':
             if pkt_to_compare.src == "10.0.0.2":
                 first_rule = requests.post("http://localhost:8080/qos/rules/0000000000000001", '{"match": {"nw_src": "10.0.0.2", "nw_dst": "10.0.0.1"}, "actions":{"queue": "1"}}')
             elif pkt_to_compare.src == "10.0.0.3":
                 second_rule = requests.post("http://localhost:8080/qos/rules/0000000000000001", '{"match": {"nw_src": "10.0.0.3", "nw_dst": "10.0.0.1"}, "actions":{"queue": "2"}}')
             
-        elif pkt_to_compare == 'arp'
+        elif pkt_to_compare == 'arp':
             if pkt_to_compare.src_ip == "10.0.0.2":
                 first_rule = requests.post("http://localhost:8080/qos/rules/0000000000000001", '{"match": {"nw_src": "10.0.0.2", "nw_dst": "10.0.0.1"}, "actions":{"queue": "1"}}')
             elif pkt_to_compare.src == "10.0.0.3":
