@@ -24,12 +24,13 @@ class SimpleSwitch13(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-
 	# Indicates an empty match which means that we match everything
         match = parser.OFPMatch()
+        
 	# Forward the packet to the OF Controller without buffering
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
+        
 	# Call add_flow to install flow entry via flow_mod to modify flow table
 	# To add flow entry
         self.add_flow(datapath, 0, match, actions)
@@ -40,6 +41,8 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                              actions)]
+        # If a buffer ID has been provided, then install the
+        # flow entry with the buffer IP
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
                                     priority=priority, match=match,
@@ -49,17 +52,21 @@ class SimpleSwitch13(app_manager.RyuApp):
                                     match=match, instructions=inst, table_id=1)
         datapath.send_msg(mod)
 
+    # Drop flow entries
     def drop_flow(self, datapath, priority, match):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
+        # Initiate the instructions to be empty.  By default, an empty action
+        # consistitutes an automatic drop of a packet
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, [])]
+
+        # Message sent to the switch to modify the flow table
         mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                 match=match, instructions=inst, table_id=1)
         datapath.send_msg(mod)
 
-
-
+    # Our event handler to handle packet-in messages.
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
@@ -139,7 +146,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         # Set action to forward packet-in message to the output port.
         actions = [parser.OFPActionOutput(out_port)]
 
-        # install a flow to avoid packet_in next time
+        # Install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
             match = parser.OFPMatch(in_port = in_port, eth_dst = dst, eth_src = src)
 
@@ -150,10 +157,13 @@ class SimpleSwitch13(app_manager.RyuApp):
                 self.add_flow(datapath, 1, match, actions)
 
         data = None
+
+        
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data
 
         out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
                                   in_port=in_port, actions=actions, data=data)
+        # Send the message to the controller
         datapath.send_msg(out)
 
