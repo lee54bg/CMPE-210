@@ -5,13 +5,16 @@ import sys
 
 def Get_File(name, sock):
 	file_name = sock.recv(1024)
+	
 	if os.path.isfile(file_name):
 		sock.send("Exists "+str(os.path.getsize(file_name)))
 		user_reply = sock.recv(1024)
+		
 		if user_reply[:2] == 'OK':
 			with open(file_name, 'rb') as f_n:
 				data_send = f_n.read(1024)
 				sock.send(data_send)
+				
 				while data_send != "":
 					data_send = f_n.read(1024)
 					sock.send(data_send)
@@ -43,8 +46,3 @@ def Main():
 
 if __name__ == '__main__':
 	Main()
-
-
-
-
-
